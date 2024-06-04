@@ -2,7 +2,7 @@ import os
 import argparse
 import yt_dlp
 
-def download_songs(urls, output_path, audio_format, sample_rate):
+def download_songs(urls, output_path, audio_format, sample_rate, bits_per_sample, channels):
     os.makedirs(output_path, exist_ok=True)
     
     ydl_opts = {
@@ -15,6 +15,8 @@ def download_songs(urls, output_path, audio_format, sample_rate):
         }],
         'postprocessor_args': [
             '-ar', str(sample_rate),
+            '-ac', str(channels),
+            '-sample_fmt', f's{bits_per_sample}'
         ],
         'quiet': True,
         'extract_flat': False,
@@ -42,6 +44,8 @@ def main():
     parser.add_argument("-f", "--file-path", help="File containing YouTube playlist URLs and/or individual video URLs, one per line")
     parser.add_argument("-x", "--audio-format", choices=["mp3", "wav"], default="mp3", help="Audio format for downloaded files (default: mp3)")
     parser.add_argument("-r", "--sample-rate", type=int, default=44100, help="Sample rate for downloaded audio files (default: 44100)")
+    parser.add_argument("-b", "--bits-per-sample", type=int, default=16, help="Bits per sample for downloaded audio files (default: 16)")
+    parser.add_argument("-c", "--channels", type=int, default=2, help="Number of channels for downloaded audio files (default: 2)")
     args = parser.parse_args()
     
     urls = args.urls
@@ -54,7 +58,7 @@ def main():
         print("No URLs provided")
         return
 
-    download_songs(urls, args.output_path, args.audio_format, args.sample_rate)
+    download_songs(urls, args.output_path, args.audio_format, args.sample_rate, args.bits_per_sample, args.channels)
 
 if __name__ == "__main__":
     main()
