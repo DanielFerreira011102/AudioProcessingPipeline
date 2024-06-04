@@ -89,6 +89,8 @@ int main (int argc, char* argv[]) {
 
 	SndfileHandle audioFile { argv[argc-1] };
 	if(audioFile.error()) {
+		cout << "File: " << argv[argc-1] << endl;
+		cerr << "Error: " << audioFile.strError() << endl;
 		cerr << "Error: invalid audio file\n";
 		return 1;
 	}
@@ -161,6 +163,6 @@ int main (int argc, char* argv[]) {
 	delete[] samples;
 	fftw_destroy_plan(plan);
 
-	return 0 ;
+	return 0;
 }
 
