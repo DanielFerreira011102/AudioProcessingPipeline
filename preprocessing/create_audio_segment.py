@@ -3,7 +3,7 @@ import argparse
 import random
 from pydub import AudioSegment
 
-def create_audio_segment(audio_paths, output_path, duration, start_time=None):
+def create_audio_segment(audio_paths, output_path, duration, start_time=None, min_time=0):
     os.makedirs(output_path, exist_ok=True)
 
     for audio_path in audio_paths:
@@ -14,8 +14,18 @@ def create_audio_segment(audio_paths, output_path, duration, start_time=None):
         if audio.duration_seconds < duration:
             print(f"Audio duration is less than {duration} seconds: {audio_path}")
             continue
+        
+        if min_time >= audio.duration_seconds - duration:
+            print(f"min_time is too large for audio file: {audio_path}")
+            continue
 
-        current_start_time = random.randint(0, int(audio.duration_seconds - duration)) if start_time is None else start_time
+        if start_time is None:
+            current_start_time = random.randint(min_time, int(audio.duration_seconds - duration))
+        else:
+            if start_time < min_time or start_time > audio.duration_seconds - duration:
+                print(f"Invalid start_time for audio file: {audio_path}")
+                continue
+            current_start_time = start_time
 
         audio_segment = audio[current_start_time * 1000:(current_start_time + duration) * 1000]
 
@@ -23,12 +33,12 @@ def create_audio_segment(audio_paths, output_path, duration, start_time=None):
 
         audio_segment.export(output_file, format=audio_format)
         print(f"Created: {output_file}")
-    
 
 def main():
     parser = argparse.ArgumentParser(description="Create a segment of an audio file or files.")
     parser.add_argument("paths", nargs="+", help="Path to audio files or directories containing audio files")
     parser.add_argument("-d", "--duration", type=int, default=5, help="Duration of the segment in seconds (default: 30)")
+    parser.add_argument("-m", "--min-time", type=int, default=0, help="Minimum start time of the segment in seconds (default: 0)")
     parser.add_argument("-s", "--start-time", type=int, default=None, help="Start time of the segment in seconds (default: None). If None, the start time is randomly selected.")
     parser.add_argument("-o", "--output-path", default="data/segments/", help="Output path for audio segments (default: data/segments/)")
     args = parser.parse_args()
@@ -50,7 +60,7 @@ def main():
         print("No audio files found")
         return
     
-    create_audio_segment(audio_paths, args.output_path, args.duration, args.start_time)
+    create_audio_segment(audio_paths, args.output_path, args.duration, args.start_time, args.min_time)
 
 if __name__ == "__main__":
     main()
