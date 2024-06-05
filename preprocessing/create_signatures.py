@@ -7,45 +7,45 @@ def is_package_installed(package_name):
     return result.returncode == 0
 
 def create_gmf_signatures(paths, output_path, args):    
-    # 1. Check if libsndfile1-dev is installed
+    # 2. Check if the output path exists and create it if it does not
+    os.makedirs(output_path, exist_ok=True)
+
+    # 3. Check if libsndfile1-dev is installed
     if not is_package_installed("libsndfile1-dev"):
         print("libsndfile1-dev is not installed")
         return
     
-    # 2. Check if fftw3 is installed
+    # 4. Check if fftw3 is installed
     if not is_package_installed("fftw3"):
         print("fftw3 is not installed")
         return
     
-    # 3. Check if fftw3-dev is installed
+    # 5. Check if fftw3-dev is installed
     if not is_package_installed("fftw3-dev"):
         print("fftw3-dev is not installed")
         return
     
-    # 4. Check if pkg-config is installed
+    # 6. Check if pkg-config is installed
     if not is_package_installed("pkg-config"):
         print("pkg-config is not installed")
         return
     
-   # 5. Check if the file GetMaxFreqs.cpp exists in the GetMaxFreqs directory
+    # 7. Check if the file GetMaxFreqs.cpp exists in the GetMaxFreqs directory
     if not os.path.exists("GetMaxFreqs/src/GetMaxFreqs.cpp"):
         print("GetMaxFreqs.cpp does not exist")
         return
     
-    # 6. Compile GetMaxFreqs
+    # 8. Compile GetMaxFreqs
     if subprocess.run(["g++", "-W", "-Wall", "-std=c++11", "-o", "GetMaxFreqs/bin/GetMaxFreqs", "GetMaxFreqs/src/GetMaxFreqs.cpp", "-lsndfile", "-lfftw3", "-lm"]).returncode != 0:
         print("Compilation failed")
         return
     
-    # 7. Add permissions to GetMaxFreqs
+    # 9. Add permissions to GetMaxFreqs
     if subprocess.run(["chmod", "+x", "GetMaxFreqs/bin/GetMaxFreqs"]).returncode != 0:
         print("Failed to add permissions to GetMaxFreqs")
         return
     
-    # 8. Check if the output path exists and create it if it does not
-    os.makedirs(output_path, exist_ok=True)
-    
-    # 9. Generate signatures
+    # 10. Generate signatures
     for path in paths:
         output_file = os.path.join(output_path, os.path.splitext(os.path.basename(path))[0] + ".gmf")
         if subprocess.run(["GetMaxFreqs/bin/GetMaxFreqs", "-w", output_file, args, path]).returncode != 0:
@@ -54,6 +54,7 @@ def create_gmf_signatures(paths, output_path, args):
         print(f"Generated signature for {path}")
 
 def create_signatures(paths, output_path, signature_type, args):
+    # 1. Select the signature type and create the signatures
     match signature_type:
         case "gmf":
             create_gmf_signatures(paths, output_path, args)

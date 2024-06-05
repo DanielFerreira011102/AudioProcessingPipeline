@@ -4,11 +4,13 @@ import random
 from pydub import AudioSegment
 
 def create_audio_segment(audio_paths, output_path, duration, start_time=None, min_time=0):
+    # 1. Check if the output path exists and create it if it does not
     os.makedirs(output_path, exist_ok=True)
 
     for audio_path in audio_paths:
         audio_format = audio_path.rsplit('.', 1)[1]
 
+        # 2. Load the audio file
         audio = AudioSegment.from_file(audio_path)
         
         if audio.duration_seconds < duration:
@@ -18,7 +20,8 @@ def create_audio_segment(audio_paths, output_path, duration, start_time=None, mi
         if min_time >= audio.duration_seconds - duration:
             print(f"min_time is too large for audio file: {audio_path}")
             continue
-
+        
+        # 3. Select the start time of the segment
         if start_time is None:
             current_start_time = random.randint(min_time, int(audio.duration_seconds - duration))
         else:
@@ -27,11 +30,14 @@ def create_audio_segment(audio_paths, output_path, duration, start_time=None, mi
                 continue
             current_start_time = start_time
 
+        # 4. Create the audio segment
         audio_segment = audio[current_start_time * 1000:(current_start_time + duration) * 1000]
-
+        
         output_file = os.path.join(output_path, f"{os.path.basename(audio_path).rsplit('.', 1)[0]}_{current_start_time}s_{duration}s.{audio_format}")
 
+        # 5. Export the audio segment
         audio_segment.export(output_file, format=audio_format)
+
         print(f"Created: {output_file}")
 
 def main():
