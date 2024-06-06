@@ -1,0 +1,39 @@
+steps:
+  - script: src/preprocessing/create_dataset.py
+    args:
+      file_paths: ["data/playlists.txt"]
+      output_path: "data/music"
+      audio_format: "wav"
+      sample_rate: 44100
+      bits_per_sample: 16
+      channels: 2
+  - script: src/preprocessing/create_segments.py
+    args:
+      __NO_ARG_NAME__paths: ["data/music"]
+      duration: 5
+      min_time: 60
+      start_time: null
+      output_path: "data/segments"
+  - script: src/preprocessing/create_noise.py
+    args:
+      __NO_ARG_NAME__paths: ["data/segments"]
+      output_path: "data/noise"
+      noise_type: "white"
+      intensity: 0.3
+  - script: src/preprocessing/create_signatures.py
+    args:
+      __NO_ARG_NAME__paths: ["data/music"]
+      output_path: "data/signatures/original"
+      signature_type: "gmf"
+  - script: src/preprocessing/create_signatures.py
+    args:
+      __NO_ARG_NAME__paths: ["data/noise"]
+      output_path: "data/signatures/segments"
+      signature_type: "gmf"
+      signature_args: ""
+  - script: src/main/create_distance_results.py
+    args:
+      __NO_ARG_NAME__paths: ["data/signatures/segments"]
+      database_path: "data/signatures/original"
+      algorithm: "bz2"
+      output_path: "data/distances/{algorithm}/results.csv"
