@@ -18,10 +18,12 @@ check_package fftw3-dev
 check_package pkg-config
 check_package libsndfile1-dev
 
+SCRIPT_DIR=$(dirname "$0")
+
 # Install Python requirements
 echo "Installing Python requirements..."
-pip install -r requirements.txt
+pip install -r $SCRIPT_DIR/../requirements.txt
 
 # Install current directory as a package
 echo "Installing current directory as a package..."
-pip install -e .
+pip install -e $SCRIPT_DIR/..

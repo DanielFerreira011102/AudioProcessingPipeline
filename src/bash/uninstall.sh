@@ -18,12 +18,15 @@ remove_package fftw3-dev
 remove_package pkg-config
 remove_package libsndfile1-dev
 
+SCRIPT_DIR=$(dirname "$0")
+PROJECT_DIR=$(dirname "$SCRIPT_DIR")
+
 # Remove Python requirements
 echo "Removing Python requirements..."
-pip uninstall -r requirements.txt -y
+pip uninstall -r $SCRIPT_DIR/../requirements.txt -y
 
 # Uninstall current directory package
 echo "Uninstalling current directory package..."
-pip uninstall -y $(basename $(pwd))
+pip uninstall -y $(basename $PROJECT_DIR)
 
 echo "Uninstallation complete."
