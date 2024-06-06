@@ -7,6 +7,24 @@ import lzma
 from itertools import product
 from multiprocessing import Pool, Manager, cpu_count
 
+def load_signature_files(paths, extensions=(".freqs")):
+    signature_paths = set()
+    
+    for path in paths:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Path not found: {path}")
+        
+        if os.path.isdir(path):
+            signature_paths.update(os.path.join(path, file) for file in os.listdir(path) if file.endswith(extensions))
+
+        if os.path.isfile(path) and path.endswith(extensions):
+            signature_paths.add(path)
+
+    if not signature_paths:
+        raise FileNotFoundError("No signature files found")
+
+    return signature_paths
+
 def gzip_compress(data):
     return gzip.compress(data)
 
@@ -15,9 +33,6 @@ def bz2_compress(data):
 
 def lzma_compress(data):
     return lzma.compress(data)
-
-def load_signatures(signatures_path):
-    return [os.path.join(signatures_path, file) for file in os.listdir(signatures_path) if os.path.isfile(os.path.join(signatures_path, file))]
 
 def load_compression_results(compression_results_path):
     results = {}
@@ -72,21 +87,18 @@ def compress_and_calculate(segment_signature_path, signature, algorithm, segment
 
     return segment_signature_name, signature_name, ncd
 
-def create_results(segment_signatures_paths, signatures_path, algorithm, compression_results_path, output_path):
+def create_results(segment_signature_paths, signature_paths, algorithm, output_path):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
-    signatures = load_signatures(signatures_path)
-
     manager = Manager()
     segment_signatures_cache = manager.dict()
     signatures_cache = manager.dict()
-    signatures_cache.update(load_compression_results(compression_results_path))
     results = []
 
     with Pool(cpu_count()) as pool:
         tasks = [
             (segment_signature_path, signature, algorithm, segment_signatures_cache, signatures_cache)
-            for segment_signature_path, signature in product(segment_signatures_paths, signatures)
+            for segment_signature_path, signature in product(segment_signature_paths, signature_paths)
         ]
         results = pool.starmap(compress_and_calculate, tasks)
 
@@ -100,27 +112,15 @@ def main():
     parser.add_argument("paths", nargs="+", type=str, help="Path to audio files or directories containing the segment signatures")
     parser.add_argument("-s", "--signatures-path", type=str, help="Path to signatures", default="data/signatures/")
     parser.add_argument("-x", "--algorithm", type=str, help="Algorithm to compress files", default="gzip", choices=["gzip", "bz2", "lzma"])
-    parser.add_argument("-y", "--compression-results-path", type=str, help="Path to the pre-computed compression results of the database files", default=None)
     parser.add_argument("-o", "--output-path", type=str, help="Path to store the results", default="data/distance_results/{algorithm}/results.csv")
     args = parser.parse_args()
 
     args.output_path = args.output_path.format(algorithm=args.algorithm)
 
-    segment_signatures_paths = set()
-    for path in args.paths:
-        if not os.path.exists(path):
-            print(f"Path does not exist: {path}")
-            return
-        if os.path.isdir(path):
-            segment_signatures_paths.update(os.path.join(path, file) for file in os.listdir(path) if os.path.isfile(os.path.join(path, file)))
-        elif os.path.isfile(path):
-            segment_signatures_paths.add(path)
-
-    if not segment_signatures_paths:
-        print("No segment signatures found")
-        return
+    segment_signature_paths = load_signature_files(args.paths)
+    signature_paths = load_signature_files([args.signatures_path])
     
-    create_results(segment_signatures_paths, args.signatures_path, args.algorithm, args.compression_results_path, args.output_path)
+    create_results(segment_signature_paths, signature_paths, args.algorithm, args.output_path)
 
 if __name__ == '__main__':
     main()

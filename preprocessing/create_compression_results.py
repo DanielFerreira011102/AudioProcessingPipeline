@@ -1,10 +1,27 @@
 import os
 import argparse
 import csv
-
 import gzip
 import bz2
 import lzma
+
+def load_signature_files(paths, extensions=(".freqs")):
+    signature_paths = set()
+    
+    for path in paths:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Path not found: {path}")
+        
+        if os.path.isdir(path):
+            signature_paths.update(os.path.join(path, file) for file in os.listdir(path) if file.endswith(extensions))
+
+        if os.path.isfile(path) and path.endswith(extensions):
+            signature_paths.add(path)
+
+    if not signature_paths:
+        raise FileNotFoundError("No signature files found")
+
+    return signature_paths
 
 def gzip_compress(data):
     return gzip.compress(data)
@@ -15,30 +32,38 @@ def bz2_compress(data):
 def lzma_compress(data):
     return lzma.compress(data)
 
-def create_compression_results(audio_paths, algorithm, output_path):
+def compress_file(algorithm, data):
+    compressors = {
+        "gzip": gzip_compress,
+        "bz2": bz2_compress,
+        "lzma": lzma_compress
+    }
+    compressor = compressors.get(algorithm)
+    if compressor:
+        return len(compressor(data))
+    raise ValueError(f"Unknown algorithm: {algorithm}")
+
+def create_compression_results(signature_paths, algorithm, output_path):
+    # 1. Create the output directory if it does not exist
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     with open(output_path, "w") as result_file:
         csv_writer = csv.writer(result_file)
         csv_writer.writerow(["filename", "compressed_size"])
 
-        for audio_path in audio_paths:
-            with open(audio_path, "rb") as audio_file:
-                audio_data = audio_file.read()
+        for signature_path in signature_paths:
+            with open(signature_path, "rb") as signature_file:
+                # 2. Read the signature data
+                audio_data = signature_file.read()
 
-                match algorithm:
-                    case "gzip":
-                        compressed_audio_data = gzip_compress(audio_data)
-                    case "bz2":
-                        compressed_audio_data = bz2_compress(audio_data)
-                    case "lzma":
-                        compressed_audio_data = lzma_compress(audio_data)
-                    case _:
-                        print(f"Unknown algorithm: {algorithm}")
-                        return
+                # 3. Compress the signature data
+                compressed_audio_data = compress_file(algorithm, audio_data)
                     
+                # 4. Get the size of the compressed data
                 compressed_size = len(compressed_audio_data)
-                csv_writer.writerow([os.path.basename(audio_path), compressed_size])
+
+                # 5. Write the results to the output file
+                csv_writer.writerow([os.path.basename(signature_path), compressed_size])
                             
 def main():
     parser = argparse.ArgumentParser(description="Compress audio files and store the results in a file.")
@@ -49,24 +74,9 @@ def main():
 
     args.output_path = args.output_path.format(algorithm=args.algorithm)
 
-    audio_paths = set()
-
-    for path in args.paths:
-        if not os.path.exists(path):
-            print(f"Path does not exist: {path}")
-            return
-        
-        if os.path.isdir(path):
-            audio_paths.update({os.path.join(path, audio_file) for audio_file in os.listdir(path)})
-
-        elif os.path.isfile(path):
-            audio_paths.add(path)
-
-    if not audio_paths:
-        print("No audio files found")
-        return
+    signature_paths = load_signature_files(args.paths)
     
-    create_compression_results(audio_paths, args.algorithm, args.output_path)
+    create_compression_results(signature_paths, args.algorithm, args.output_path)
 
 if __name__ == "__main__":
     main()

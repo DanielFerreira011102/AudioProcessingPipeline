@@ -2,6 +2,24 @@ import os
 import argparse
 import subprocess
 
+def load_audio_files(paths, extensions=(".mp3", ".wav")):
+    audio_paths = set()
+    
+    for path in paths:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Path not found: {path}")
+        
+        if os.path.isdir(path):
+            audio_paths.update(os.path.join(path, file) for file in os.listdir(path) if file.endswith(extensions))
+
+        if os.path.isfile(path) and path.endswith(extensions):
+            audio_paths.add(path)
+
+    if not audio_paths:
+        raise FileNotFoundError("No audio files found")
+    
+    return audio_paths
+
 def is_package_installed(package_name):
     result = subprocess.run(["dpkg", "-l", package_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return result.returncode == 0
@@ -47,7 +65,7 @@ def create_gmf_signatures(paths, output_path, args):
     
     # 10. Generate signatures
     for path in paths:
-        output_file = os.path.join(output_path, os.path.splitext(os.path.basename(path))[0] + ".gmf")
+        output_file = os.path.join(output_path, os.path.basename(path).rsplit('.', 1)[0] + ".freqs")
         if subprocess.run(["GetMaxFreqs/bin/GetMaxFreqs", "-w", output_file, args, path]).returncode != 0:
             print(f"Failed to generate signature for {path}")
             return
@@ -65,27 +83,14 @@ def create_signatures(paths, output_path, signature_type, args):
 def main():
     parser = argparse.ArgumentParser(description="Generate audio signatures from audio files.")
     parser.add_argument("paths", nargs="+", type=str, help="Path to audio files or directories containing audio files")
-    parser.add_argument("-o", "--output-path", type=str, default="data/signatures/", help="Output path for signatures (default: data/signatures/)")
-    parser.add_argument("-n", "--signature-type", type=str, default="gmf", help="Type of signature to generate (default: gmf)")
+    parser.add_argument("-o", "--output-path", type=str, default="data/signatures/{signature_type}", help="Output path for signatures (default: data/signatures/{signature_type})")
+    parser.add_argument("-n", "--signature-type", type=str, default="gmf", help="Type of signature to generate", choices=["gmf"])
     parser.add_argument("-x", "--args", type=str, default="", help="Arguments for the signature type")
     args = parser.parse_args()
+
+    args.output_path = args.output_path.format(signature_type=args.signature_type)
     
-    audio_paths = set()
-
-    for path in args.paths:
-        if not os.path.exists(path):
-            print(f"Path does not exist: {path}")
-            return
-        
-        if os.path.isdir(path):
-            audio_paths.update(os.path.join(path, file) for file in os.listdir(path) if file.endswith((".mp3", ".wav")))
-
-        if os.path.isfile(path) and path.endswith((".mp3", ".wav")):
-            audio_paths.add(path)
-
-    if not audio_paths:
-        print("No audio files found")
-        return
+    audio_paths = load_audio_files(args.paths)
     
     create_signatures(audio_paths, args.output_path, args.signature_type, args.args)
 

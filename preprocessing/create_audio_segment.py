@@ -3,6 +3,24 @@ import argparse
 import random
 from pydub import AudioSegment
 
+def load_audio_files(paths, extensions=(".mp3", ".wav")):
+    audio_paths = set()
+    
+    for path in paths:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Path not found: {path}")
+        
+        if os.path.isdir(path):
+            audio_paths.update(os.path.join(path, file) for file in os.listdir(path) if file.endswith(extensions))
+
+        if os.path.isfile(path) and path.endswith(extensions):
+            audio_paths.add(path)
+
+    if not audio_paths:
+        raise FileNotFoundError("No audio files found")
+    
+    return audio_paths
+
 def create_audio_segment(audio_paths, output_path, duration, start_time=None, min_time=0):
     # 1. Check if the output path exists and create it if it does not
     os.makedirs(output_path, exist_ok=True)
@@ -49,22 +67,7 @@ def main():
     parser.add_argument("-o", "--output-path", default="data/segments/", help="Output path for audio segments (default: data/segments/)")
     args = parser.parse_args()
 
-    audio_paths = set()
-    
-    for path in args.paths:
-        if not os.path.exists(path):
-            print(f"Path does not exist: {path}")
-            return
-        
-        if os.path.isdir(path):
-            audio_paths.update(os.path.join(path, file) for file in os.listdir(path) if file.endswith((".mp3", ".wav")))
-
-        if os.path.isfile(path) and path.endswith((".mp3", ".wav")):
-            audio_paths.add(path)
-
-    if not audio_paths:
-        print("No audio files found")
-        return
+    audio_paths = load_audio_files(args.paths)
     
     create_audio_segment(audio_paths, args.output_path, args.duration, args.start_time, args.min_time)
 
