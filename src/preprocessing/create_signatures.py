@@ -1,60 +1,59 @@
 import os
 import argparse
 import subprocess
+from multiprocessing import Pool, cpu_count
 from common.utils import load_audio_files, is_package_installed, timer
 
-def create_gmf_signatures(paths, output_path, args, verbose=False):
-    # 2. Check if the output path exists and create it if it does not
-    os.makedirs(output_path, exist_ok=True)
-
-    # 3. Check if libsndfile1-dev is installed
-    if not is_package_installed("libsndfile1-dev"):
-        print("libsndfile1-dev is not installed")
-        return
-    
-    # 4. Check if fftw3 is installed
-    if not is_package_installed("fftw3"):
-        print("fftw3 is not installed")
-        return
-    
-    # 5. Check if fftw3-dev is installed
-    if not is_package_installed("fftw3-dev"):
-        print("fftw3-dev is not installed")
-        return
-    
-    # 6. Check if pkg-config is installed
-    if not is_package_installed("pkg-config"):
-        print("pkg-config is not installed")
-        return
-    
-    # 7. Check if the file GetMaxFreqs.cpp exists in the GetMaxFreqs directory
+def compile_get_max_freqs():
     if not os.path.exists("GetMaxFreqs/src/GetMaxFreqs.cpp"):
         print("GetMaxFreqs.cpp does not exist")
-        return
-    
-    # 8. Compile GetMaxFreqs
+        return False
+
     if subprocess.run(["g++", "-W", "-Wall", "-std=c++11", "-o", "GetMaxFreqs/bin/GetMaxFreqs", "GetMaxFreqs/src/GetMaxFreqs.cpp", "-lsndfile", "-lfftw3", "-lm"]).returncode != 0:
         print("Compilation failed")
-        return
-    
-    # 9. Add permissions to GetMaxFreqs
+        return False
+
     if subprocess.run(["chmod", "+x", "GetMaxFreqs/bin/GetMaxFreqs"]).returncode != 0:
         print("Failed to add permissions to GetMaxFreqs")
+        return False
+
+    return True
+
+def check_dependencies():
+    dependencies = ["libsndfile1-dev", "fftw3", "fftw3-dev", "pkg-config"]
+    for dep in dependencies:
+        if not is_package_installed(dep):
+            print(f"{dep} is not installed")
+            return False
+    return True
+
+def generate_signature(args):
+    path, output_path, signature_args = args
+    output_file = os.path.join(output_path, os.path.basename(path).rsplit('.', 1)[0] + ".freqs")
+    if subprocess.run(["GetMaxFreqs/bin/GetMaxFreqs", "-w", output_file, signature_args, path]).returncode != 0:
+        print(f"Failed to generate signature for {path}")
+        return False
+    return True
+
+def create_gmf_signatures(paths, output_path, args, verbose=False):
+    os.makedirs(output_path, exist_ok=True)
+
+    if not check_dependencies() or not compile_get_max_freqs():
         return
-    
-    # 10. Generate signatures
-    for path in paths:
-        output_file = os.path.join(output_path, os.path.basename(path).rsplit('.', 1)[0] + ".freqs")
-        if subprocess.run(["GetMaxFreqs/bin/GetMaxFreqs", "-w", output_file, args, path]).returncode != 0:
-            print(f"Failed to generate signature for {path}")
-            return
-        
-        if verbose:
-            print(f"Generated signature for {path}")
+
+    with Pool(cpu_count()) as pool:
+        tasks = [(path, output_path, args) for path in paths]
+        results = pool.map(generate_signature, tasks)
+
+    if verbose:
+        for path, result in zip(paths, results):
+            if result:
+                print(f"Generated signature for {path}")
+            else:
+                print(f"Failed to generate signature for {path}")
 
 @timer
 def create_signatures(paths, output_path, signature_type, args, verbose=False):
-    # 1. Select the signature type and create the signatures
     match signature_type:
         case "gmf":
             create_gmf_signatures(paths, output_path, args, verbose)

@@ -24,6 +24,7 @@ steps:
     args:
       __NO_ARG_NAME__paths: ["data/music"]
       output_path: "data/signatures/original"
+      signature-args: "-ws 1024 -sh 256 -nf 8"
       signature_type: "gmf"
   - script: src/preprocessing/create_signatures.py
     args:
