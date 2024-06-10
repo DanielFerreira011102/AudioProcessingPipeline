@@ -10,6 +10,8 @@
 4. [Running the Pipeline](#running-the-pipeline)
 5. [Configuration](#configuration)
 6. [Project Structure](#project-structure)
+7. [Report](#report)
+8. [Video](#video)
 
 ---
 
@@ -153,3 +155,9 @@ TAI3/
 │   └── pipeline.py                # Pipeline orchestrator
 └── README.md                      # This README file
 ```
+
+## Report
+The report for this project can be found [here](report.pdf).
+
+## Video
+The video presentation for this project can be found [here](...).
