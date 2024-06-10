@@ -30,7 +30,8 @@ def check_dependencies():
 def generate_signature(args):
     path, output_path, signature_args = args
     output_file = os.path.join(output_path, os.path.basename(path).rsplit('.', 1)[0] + ".freqs")
-    if subprocess.run(["GetMaxFreqs/bin/GetMaxFreqs", "-w", output_file, signature_args, path]).returncode != 0:
+    signature_args = signature_args.split()
+    if subprocess.run(["GetMaxFreqs/bin/GetMaxFreqs", "-w", output_file] + signature_args + [path]).returncode != 0:
         print(f"Failed to generate signature for {path}")
         return False
     return True

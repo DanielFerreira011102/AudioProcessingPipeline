@@ -1,6 +1,5 @@
 import subprocess
 import argparse
-import sys
 import yaml
 
 def run_script(script_name, args):
