@@ -160,4 +160,4 @@ TAI3/
 The report for this project can be found [here](report.pdf).
 
 ## Video
-The video presentation for this project can be found [here](...).
+The video presentation for this project can be found [here](https://youtu.be/kd3IsJRZlHg).
